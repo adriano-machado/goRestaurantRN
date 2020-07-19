@@ -75,7 +75,7 @@ export const FoodsContainer = styled.View`
   margin-top: 40px;
 `;
 
-finishing testesexport const FoodList = styled.View`
+export const FoodList = styled.View`
   padding: 0 20px;
   margin-top: 16px;
 `;
