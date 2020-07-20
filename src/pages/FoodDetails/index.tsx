@@ -73,101 +73,91 @@ const FoodDetails: React.FC = () => {
 
   useEffect(() => {
     async function loadFood(): Promise<void> {
-      const { id } = routeParams;
-
-      const response = await api.get<Food>(`/foods/${id}`);
-
-      const selectedFood = response.data;
-
-      setFood(selectedFood);
-
-      const extraExists = selectedFood.extras.map((extra: Extra) => {
-        return {
-          ...extra,
-          quantity: 0,
-        };
-      });
-
-      setExtras(extraExists);
+      // Load a specific food with extras based on routeParams id
+      const response = await api.get(`/foods/${routeParams.id}`);
+      // const responseFavorites = await api.get('favorites');
+      // const isFavoriteFood = responseFavorites.data.find(
+      //   (favoriteFood: Food) => favoriteFood.id === routeParams.id,
+      // );
+      // if (isFavoriteFood) {
+      //   setIsFavorite(true);
+      // } else {
+      //   setIsFavorite(false);
+      // }
+      setFood(response.data);
+      setExtras(
+        response.data.extras.map((extra: Extra) => ({ ...extra, quantity: 0 })),
+      );
     }
 
     loadFood();
   }, [routeParams]);
 
   function handleIncrementExtra(id: number): void {
-    const newExtra = extras.map(extra => {
-      if (id === extra.id) {
-        return {
-          ...extra,
-          quantity: extra.quantity + 1,
-        };
+    const newExtras = extras.map(extra => {
+      if (extra.id === id) {
+        return { ...extra, quantity: extra.quantity + 1 };
       }
       return extra;
     });
-
-    setExtras(newExtra);
+    setExtras(newExtras);
+    // Increment extra quantity
   }
 
   function handleDecrementExtra(id: number): void {
-    const newExtra = extras.map(extra => {
-      if (id === extra.id) {
-        return {
-          ...extra,
-          quantity: extra.quantity <= 0 ? 0 : extra.quantity - 1,
-        };
+    const newExtras = extras.map(extra => {
+      if (extra.id === id && extra.quantity >= 1) {
+        return { ...extra, quantity: extra.quantity - 1 };
       }
       return extra;
     });
-
-    setExtras(newExtra);
+    setExtras(newExtras);
+    setExtras(newExtras);
   }
 
   function handleIncrementFood(): void {
     setFoodQuantity(foodQuantity + 1);
+    // Increment food quantity
   }
 
   function handleDecrementFood(): void {
-    if (foodQuantity > 1) {
-      setFoodQuantity(foodQuantity - 1);
-    }
+    if (foodQuantity <= 1) return;
+    setFoodQuantity(foodQuantity - 1);
+
+    // Decrement food quantity
   }
 
   const toggleFavorite = useCallback(async () => {
-    if (isFavorite) {
+    // Toggle if food is favorite or not
+    if (!isFavorite) {
+      await api.post('favorites', food);
+      setIsFavorite(true);
+    } else {
+      await api.delete(`favorites/${food.id}`);
       setIsFavorite(false);
-      await api.delete(`/favorites/${food.id}`);
-      return;
     }
-    setIsFavorite(true);
-    await api.post('/favorites', food);
   }, [isFavorite, food]);
 
   const cartTotal = useMemo(() => {
-    const extraTotal = extras.reduce((acum, extra) => {
-      return acum + extra.value * extra.quantity;
-    }, 0);
-    const foodTotal = food.price * foodQuantity;
-    return formatValue(extraTotal + foodTotal);
+    // Calculate cartTotal
+    const totalFood = food.price;
+
+    let totalExtras = 0;
+    extras.forEach(extra => {
+      const extraPrice = Number(extra.quantity) * Number(extra.value);
+      totalExtras += extraPrice;
+    });
+    const total = Number(totalFood) + Number(totalExtras);
+    return formatValue(total * foodQuantity);
   }, [extras, food, foodQuantity]);
 
   async function handleFinishOrder(): Promise<void> {
-    const response = await api.get('/orders');
-
-    const orders = response.data;
-
-    const newOrder = {
+    // Finish the order and save on the API
+    await api.post('orders', {
       ...food,
-      id: orders.length + 1,
-      extras: { ...extras },
-      quantity: foodQuantity,
-    };
-    delete newOrder.id;
-    try {
-      await api.post('/orders', newOrder);
-      navigation.navigate('Orders');
-    } catch (err) {
-      console.log(err);
-    }
+      id: undefined,
+      extras,
+    });
   }
 
   // Calculate the correct icon name
